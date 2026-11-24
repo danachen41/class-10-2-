@@ -1,6 +1,7 @@
 const actionBtn=document.createElement('button');
 actionBtn.className='btn btn-quiet';actionBtn.id='assistantButton';actionBtn.type='button';actionBtn.textContent='✦ AI 小助手';
 document.querySelector('.top-actions')?.insertBefore(actionBtn,document.getElementById('addButton'));
+const mobileStyle=document.createElement('style');mobileStyle.textContent='@media(max-width:680px){.topbar{flex-wrap:wrap;gap:12px}.top-actions{width:100%;justify-content:flex-end}.top-actions #assistantButton{font-size:0;padding:10px 11px}.top-actions #assistantButton::after{content:"✦";font-size:16px}}';document.head.append(mobileStyle);
 
 const host=document.createElement('div');host.id='aiAssistantHost';document.body.append(host);
 const shadow=host.attachShadow({mode:'open'});
