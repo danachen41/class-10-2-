@@ -1,16 +1,20 @@
 const firebaseConfig={apiKey:"AIzaSyBJ2wAFYysEUfQKL2CjvTzti5C5DwvOiDA",authDomain:"design-app-2026.firebaseapp.com",projectId:"design-app-2026",storageBucket:"design-app-2026.firebasestorage.app",messagingSenderId:"1042228910488",appId:"1:1042228910488:web:1b605689356af828ed33ed"};
+const appCheckSiteKey=""; // Firebase Console 的 App Check 註冊完成後，填入公開的 reCAPTCHA Enterprise site key。
 const version="13.4.0";
 function emit(name,detail={}){window.dispatchEvent(new CustomEvent("dailylist:"+name,{detail}))}
 function friendly(error){switch(error?.code){case "auth/popup-closed-by-user":case "auth/cancelled-popup-request":return "已取消 Google 登入。";case "auth/popup-blocked":return "瀏覽器封鎖了登入彈窗。請允許此網站開啟彈出式視窗後重試。";case "auth/unauthorized-domain":return "此網站網域尚未加入 Firebase Authentication 授權網域：danachen41.github.io";case "auth/operation-not-allowed":return "Firebase 專案尚未啟用 Google 登入。請到 Authentication 的登入提供者設定啟用 Google。";case "auth/network-request-failed":return "網路連線失敗，請檢查網路後再試。";case "auth/account-exists-with-different-credential":return "這個電子郵件已使用其他登入方式建立帳號，請先使用原本的登入方式。";default:return "Google 登入失敗（"+(error?.code||"未知錯誤")+"），請稍後再試。"}}
 async function start(){
  try{
-  const [appSdk,authSdk,storeSdk]=await Promise.all([
+  const [appSdk,authSdk,storeSdk,aiSdk,appCheckSdk]=await Promise.all([
    import("https://www.gstatic.com/firebasejs/"+version+"/firebase-app.js"),
    import("https://www.gstatic.com/firebasejs/"+version+"/firebase-auth.js"),
    import("https://www.gstatic.com/firebasejs/"+version+"/firebase-firestore.js"),
-   import("https://www.gstatic.com/firebasejs/"+version+"/firebase-ai.js")
+   import("https://www.gstatic.com/firebasejs/"+version+"/firebase-ai.js"),
+   import("https://www.gstatic.com/firebasejs/"+version+"/firebase-app-check.js")
   ]);
-  const app=appSdk.initializeApp(firebaseConfig),auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app),provider=new authSdk.GoogleAuthProvider();
+  const app=appSdk.initializeApp(firebaseConfig);
+  if(appCheckSiteKey)appCheckSdk.initializeAppCheck(app,{provider:new appCheckSdk.ReCaptchaEnterpriseProvider(appCheckSiteKey),isTokenAutoRefreshEnabled:true});
+  const auth=authSdk.getAuth(app),db=storeSdk.getFirestore(app),provider=new authSdk.GoogleAuthProvider();
   const ai=aiSdk.getAI(app,{backend:new aiSdk.GoogleAIBackend()});
   const actionSchema=aiSdk.Schema.object({properties:{reply:aiSdk.Schema.string(),actions:aiSdk.Schema.array({items:aiSdk.Schema.object({properties:{type:aiSdk.Schema.string(),id:aiSdk.Schema.string(),title:aiSdk.Schema.string(),desc:aiSdk.Schema.string(),dueDate:aiSdk.Schema.string(),priority:aiSdk.Schema.string()}})})}});
   const assistantModel=aiSdk.getGenerativeModel(ai,{model:"gemini-3.8-flash",generationConfig:{responseMimeType:"application/json",responseSchema:actionSchema}});
