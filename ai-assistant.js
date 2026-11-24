@@ -1,0 +1,34 @@
+const actionBtn=document.createElement('button');
+actionBtn.className='btn btn-quiet';actionBtn.id='assistantButton';actionBtn.type='button';actionBtn.textContent='✦ AI 小助手';
+document.querySelector('.top-actions')?.insertBefore(actionBtn,document.getElementById('addButton'));
+
+const host=document.createElement('div');host.id='aiAssistantHost';document.body.append(host);
+const shadow=host.attachShadow({mode:'open'});
+shadow.innerHTML=`
+<style>
+:host{font:14px/1.5 Inter,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;color:#17233d}
+.panel{position:fixed;z-index:100;right:22px;bottom:22px;width:min(410px,calc(100vw - 28px));height:min(640px,calc(100vh - 44px));background:#fff;border:1px solid #e7ebf2;border-radius:18px;box-shadow:0 20px 70px #17233d30;display:none;grid-template-rows:auto 1fr auto;overflow:hidden}
+.panel.open{display:grid}.head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;background:linear-gradient(110deg,#edf1ff,#f8f9ff);border-bottom:1px solid #e7ebf2}.head strong{font-size:15px}.head small{display:block;color:#78839a;font-size:11px;margin-top:2px}.close{width:32px;height:32px;border:0;border-radius:9px;background:#fff;color:#526079;font-size:20px;cursor:pointer}
+.body{overflow:auto;padding:15px;background:#f8f9fc}.intro,.bubble{max-width:92%;padding:11px 13px;border-radius:13px;background:#fff;border:1px solid #e7ebf2;margin:0 0 10px;white-space:pre-wrap;overflow-wrap:anywhere}.bubble.user{margin-left:auto;background:#456df5;color:#fff;border-color:#456df5}.bubble.error{border-color:#f3c4bd;background:#fff7f5;color:#9a3a2e}.bubble .tagline{font-size:11px;font-weight:700;color:#456df5;margin-bottom:4px}.bubble.user .tagline{color:#e2e8ff}.proposal{background:#fff;border:1px solid #cbd5ff;border-radius:13px;padding:12px;margin:0 0 12px}.proposal-title{font-weight:700;margin-bottom:7px}.proposal-item{font-size:12px;color:#526079;padding:5px 0;border-top:1px solid #f0f1f6;overflow-wrap:anywhere}.actions{display:flex;gap:8px;margin-top:10px}.actions button{border:0;border-radius:9px;padding:8px 11px;font-weight:700;cursor:pointer}.apply{background:#456df5;color:#fff}.cancel{background:#f0f2f7;color:#526079}.typing{color:#78839a;font-size:12px;margin:4px 0 10px}.foot{padding:12px 14px 14px;border-top:1px solid #e7ebf2;background:#fff}.privacy{font-size:10px;color:#8a94a6;margin:0 0 8px;line-height:1.45}.compose{display:flex;gap:8px;align-items:flex-end}.compose textarea{flex:1;resize:none;min-height:42px;max-height:110px;border:1px solid #dfe4ee;border-radius:11px;padding:10px 11px;font:inherit;outline:none}.compose textarea:focus{border-color:#91a7ff;box-shadow:0 0 0 3px #456df514}.send{border:0;border-radius:10px;padding:10px 13px;background:#456df5;color:#fff;font-weight:700;cursor:pointer}.send:disabled{opacity:.6;cursor:wait}
+</style>
+<section class="panel" role="dialog" aria-modal="false" aria-label="AI 行程小助手">
+ <header class="head"><div><strong>✦ AI 行程小助手</strong><small>整理行程、調整待辦、找出待處理重點</small></div><button class="close" aria-label="關閉">×</button></header>
+ <div class="body" aria-live="polite"><div class="intro">你可以問我：
+• 幫我總結目前最需要注意的事
+• 把「交報告」改到星期五
+• 新增明天下午三點看醫生
+
+若要修改資料，我會先列出提議，等你確認才套用。</div></div>
+ <footer class="foot"><p class="privacy">送出時，問題和目前任務清單會傳給 Google Gemini 產生建議；AI 提議需由你確認才會修改清單。</p><div class="compose"><textarea rows="1" maxlength="1200" placeholder="輸入行程或問題…"></textarea><button class="send">送出</button></div></footer>
+</section>`;
+
+const panel=shadow.querySelector('.panel'),body=shadow.querySelector('.body'),input=shadow.querySelector('textarea'),send=shadow.querySelector('.send');
+let busy=false,requestCounter=0,pending=new Map(),history=[];
+function addBubble(role,text,error=false){const node=document.createElement('div');node.className='bubble '+role+(error?' error':'');const label=document.createElement('div');label.className='tagline';label.textContent=role==='user'?'你':'AI 小助手';node.append(label,document.createTextNode(text));body.append(node);body.scrollTop=body.scrollHeight;return node}
+function setBusy(value){busy=value;send.disabled=value;input.disabled=value;send.textContent=value?'整理中…':'送出'}
+function summarizeAction(a){if(a.type==='create')return '新增：'+a.title+(a.dueDate?'（'+a.dueDate+'）':'');if(a.type==='update')return '修改：'+a.title+(a.dueDate?'（'+a.dueDate+'）':'');return '刪除：'+(a.title||a.id)}
+function showProposal(data){addBubble('assistant',data.reply||'我整理好提議了，請確認是否套用。');const actions=Array.isArray(data.actions)?data.actions.filter(a=>['create','update','delete'].includes(a.type)):[];if(!actions.length)return;const card=document.createElement('div');card.className='proposal';const title=document.createElement('div');title.className='proposal-title';title.textContent='待確認的清單變更';card.append(title);actions.forEach(a=>{const line=document.createElement('div');line.className='proposal-item';line.textContent=summarizeAction(a);card.append(line)});const controls=document.createElement('div');controls.className='actions';const apply=document.createElement('button');apply.className='apply';apply.textContent='確認套用';const cancel=document.createElement('button');cancel.className='cancel';cancel.textContent='取消';apply.addEventListener('click',()=>{window.dispatchEvent(new CustomEvent('dailylist:ai-apply',{detail:{actions}}));addBubble('assistant','已套用 '+actions.length+' 項變更。');card.remove()});cancel.addEventListener('click',()=>{addBubble('assistant','已取消，清單沒有變更。');card.remove()});controls.append(apply,cancel);card.append(controls);body.append(card);body.scrollTop=body.scrollHeight}
+async function submit(){const question=input.value.trim();if(!question||busy)return;input.value='';addBubble('user',question);history.push({role:'user',text:question});const id='ai-'+Date.now()+'-'+(++requestCounter),loader=document.createElement('div');loader.className='typing';loader.textContent='AI 正在整理…';body.append(loader);body.scrollTop=body.scrollHeight;pending.set(id,{loader});setBusy(true);window.dispatchEvent(new CustomEvent('dailylist:ai-request',{detail:{id,question,history:history.slice(-8)}}))}
+actionBtn.addEventListener('click',()=>{panel.classList.add('open');input.focus()});shadow.querySelector('.close').addEventListener('click',()=>panel.classList.remove('open'));send.addEventListener('click',submit);input.addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();submit()}});
+window.addEventListener('dailylist:ai-model-result',e=>{const {id,data,error}=e.detail,request=pending.get(id);if(!request)return;request.loader.remove();pending.delete(id);setBusy(false);if(error){addBubble('assistant',error,true);return}if(!data||typeof data.reply!=='string'){addBubble('assistant','AI 回覆格式無法辨識，請換個方式描述再試。',true);return}history.push({role:'assistant',text:data.reply});showProposal(data)});
+

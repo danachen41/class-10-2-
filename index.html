@@ -11,7 +11,9 @@
 <div class="backdrop" id="taskBackdrop"><section class="dialog" role="dialog" aria-modal="true" aria-labelledby="taskDialogTitle"><div class="dialog-top"><h2 id="taskDialogTitle">新增任務</h2><button class="close" data-close="task">×</button></div><input type="hidden" id="taskId"><div class="field"><label for="titleInput">任務名稱</label><input id="titleInput" maxlength="100" placeholder="例如：完成專題企劃"></div><div class="field"><label for="descInput">備註</label><textarea id="descInput" maxlength="500" placeholder="補充任務細節（選填）"></textarea></div><div class="field"><label for="dateInput">截止日期</label><input id="dateInput" type="date"></div><div class="field"><label for="priorityInput">優先級</label><select id="priorityInput"><option value="High">高</option><option value="Medium" selected>中</option><option value="Low">低</option></select></div><div class="dialog-actions"><button class="btn btn-quiet" data-close="task">取消</button><button class="btn btn-primary" id="saveTask">儲存任務</button></div></section></div>
 
 <script src="./app.js" defer></script>
-<script type="module" src="./firebase-auth.js"></script></body></html>
+<script type="module" src="./firebase-auth.js"></script>
+<script type="module" src="./ai-assistant.js"></script>
+</body></html>
 
 
 
